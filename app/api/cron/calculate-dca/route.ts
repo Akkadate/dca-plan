@@ -66,6 +66,12 @@ export async function POST(request: NextRequest) {
 
                 const stockPricesData = await Promise.all(pricePromises)
 
+                // Debug: Log price counts
+                console.log(`Portfolio ${portfolio.id} stock prices:`)
+                stockPricesData.forEach(({ stock, prices }) => {
+                    console.log(`  ${stock.symbol}: ${prices.length} prices`)
+                })
+
                 // Check if we have sufficient data
                 const insufficientData = stockPricesData.some(
                     ({ prices }) => prices.length < 6
@@ -78,6 +84,7 @@ export async function POST(request: NextRequest) {
                     console.log(`Insufficient data for portfolio ${portfolio.id}, using equal DCA`)
                     recommendations = calculateEqualDCA(stocks, parseFloat(portfolio.monthly_budget))
                 } else {
+                    console.log(`Using Smart DCA for portfolio ${portfolio.id}`)
                     // Prepare inputs for DCA calculation
                     const inputs: DCAInput[] = stockPricesData.map(({ stock, prices }) => ({
                         stock,
