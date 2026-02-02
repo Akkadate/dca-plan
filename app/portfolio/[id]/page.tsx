@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import DeletePortfolioButton from '@/components/DeletePortfolioButton'
 import PortfolioTabs from '@/components/PortfolioTabs'
+import EditBudget from '@/components/EditBudget'
 
 export default async function PortfolioDetailPage({
     params,
@@ -55,9 +56,12 @@ export default async function PortfolioDetailPage({
                             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                                 {portfolio.name}
                             </h1>
-                            <p className="text-gray-600 dark:text-gray-400 mt-1">
-                                Monthly Budget: ${parseFloat(portfolio.monthly_budget).toFixed(2)}
-                            </p>
+                            <div className="mt-1">
+                                <EditBudget
+                                    portfolioId={id}
+                                    currentBudget={parseFloat(portfolio.monthly_budget)}
+                                />
+                            </div>
                         </div>
                         <div className="flex items-center space-x-4">
                             <DeletePortfolioButton
