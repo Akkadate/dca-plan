@@ -7,6 +7,46 @@ export default function TestPage() {
     const [loading, setLoading] = useState('')
     const [result, setResult] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
+    const [symbols, setSymbols] = useState('')
+
+    const fetchPrices = async () => {
+        setLoading('prices')
+        setResult(null)
+        setError(null)
+
+        try {
+            if (!symbols.trim()) {
+                setError('Please enter stock symbols')
+                setLoading('')
+                return
+            }
+
+            const symbolList = symbols.split(',').map(s => s.trim().toUpperCase())
+            const results = []
+
+            for (const symbol of symbolList) {
+                const response = await fetch(`/api/prices/fetch?symbol=${symbol}`)
+                const data = await response.json()
+
+                if (!response.ok) {
+                    results.push({ symbol, error: data.error })
+                } else {
+                    results.push({
+                        symbol,
+                        success: true,
+                        priceCount: data.prices?.length || 0,
+                        cached: data.cached
+                    })
+                }
+            }
+
+            setResult({ fetchedSymbols: results })
+        } catch (err: any) {
+            setError(err.message)
+        } finally {
+            setLoading('')
+        }
+    }
 
     const testEndpoint = async (endpoint: string, name: string) => {
         setLoading(name)
@@ -78,6 +118,35 @@ export default function TestPage() {
                         </ol>
                     </div>
 
+                    {/* Fetch Prices First */}
+                    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-6">
+                        <h3 className="text-lg font-bold text-orange-900 dark:text-orange-100 mb-2">
+                            ⚠️ ดึงข้อมูลราคาหุ้นก่อน!
+                        </h3>
+                        <p className="text-sm text-orange-700 dark:text-orange-300 mb-4">
+                            ต้องมีข้อมูลราคาหุ้นอย่างน้อย 6 เดือนก่อน ถึงจะคำนวณ DCA แบบ Smart ได้ (ไม่งั้นจะเป็น Equal DCA)
+                        </p>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={symbols}
+                                onChange={(e) => setSymbols(e.target.value)}
+                                placeholder="AAPL, MSFT, GOOGL, NVDA"
+                                className="flex-1 px-4 py-2 rounded-lg border border-orange-300 dark:border-orange-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                            />
+                            <button
+                                onClick={fetchPrices}
+                                disabled={loading === 'prices'}
+                                className="px-6 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-semibold rounded-lg transition text-sm whitespace-nowrap"
+                            >
+                                {loading === 'prices' ? 'Fetching...' : 'Fetch Prices'}
+                            </button>
+                        </div>
+                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                            💡 ใส่ symbols ของหุ้นในพอร์ต คั่นด้วยคอมม่า (ใช้ Stock API Key ที่ตั้งไว้)
+                        </p>
+                    </div>
+
                     {/* Test Buttons */}
                     <div className="grid md:grid-cols-2 gap-6">
                         {/* Calculate DCA */}
@@ -114,7 +183,6 @@ export default function TestPage() {
                             </button>
                         </div>
                     </div>
-
                     {/* Error Display */}
                     {error && (
                         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
