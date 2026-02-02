@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { PortfolioStock } from '@/lib/types/database'
 
 interface StockListProps {
@@ -15,19 +14,20 @@ export default function StockList({ portfolioId, stocks }: StockListProps) {
     const [editing, setEditing] = useState<string | null>(null)
     const [editSymbol, setEditSymbol] = useState('')
     const router = useRouter()
-    const supabase = createClient()
 
     const handleDelete = async (stockId: string) => {
         if (!confirm('Are you sure you want to remove this stock?')) return
 
         setDeleting(stockId)
         try {
-            const { error } = await supabase
-                .from('portfolio_stocks')
-                .delete()
-                .eq('id', stockId)
+            const response = await fetch(`/api/stock/${stockId}`, {
+                method: 'DELETE',
+            })
 
-            if (error) throw error
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.error || 'Failed to delete stock')
+            }
 
             router.refresh()
         } catch (error: any) {
@@ -54,12 +54,18 @@ export default function StockList({ portfolioId, stocks }: StockListProps) {
         }
 
         try {
-            const { error } = await supabase
-                .from('portfolio_stocks')
-                .update({ symbol: editSymbol.toUpperCase().trim() })
-                .eq('id', stockId)
+            const response = await fetch(`/api/stock/${stockId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ symbol: editSymbol }),
+            })
 
-            if (error) throw error
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.error || 'Failed to update stock')
+            }
 
             setEditing(null)
             setEditSymbol('')

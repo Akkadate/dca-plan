@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Prompt } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+const prompt = Prompt({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ["thai", "latin"],
+  variable: "--font-prompt",
   display: "swap",
 });
 
@@ -19,9 +20,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="th">
       <body
-        className={`${inter.variable} font-sans antialiased`}
+        className={`${prompt.variable} font-sans antialiased`}
       >
         {children}
       </body>
