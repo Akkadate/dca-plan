@@ -7,9 +7,11 @@ import { createClient } from '@supabase/supabase-js'
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id: portfolioId } = await params
+
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -20,8 +22,6 @@ export async function DELETE(
                 }
             }
         )
-
-        const portfolioId = params.id
 
         // Delete portfolio (cascade will handle related records due to DB constraints)
         const { error } = await supabase
