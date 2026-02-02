@@ -39,6 +39,12 @@ export default async function DashboardPage() {
                             >
                                 History
                             </Link>
+                            <Link
+                                href="/settings"
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
+                            >
+                                Settings
+                            </Link>
                             <span className="text-sm text-gray-600 dark:text-gray-400">
                                 {user.email}
                             </span>
