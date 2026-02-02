@@ -1,10 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { PortfolioWithStocks } from '@/lib/types/database'
-import StockList from '@/components/StockList'
-import AddStockForm from '@/components/AddStockForm'
 import DeletePortfolioButton from '@/components/DeletePortfolioButton'
+import PortfolioTabs from '@/components/PortfolioTabs'
 
 export default async function PortfolioDetailPage({
     params,
@@ -76,45 +74,11 @@ export default async function PortfolioDetailPage({
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Weight Summary */}
-                {portfolio.portfolio_stocks.length > 0 && (
-                    <div className="mb-6">
-                        <div className={`p-4 rounded-lg ${Math.abs(totalWeight - 100) < 0.01
-                            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                            : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
-                            }`}>
-                            <p className={`text-sm font-medium ${Math.abs(totalWeight - 100) < 0.01
-                                ? 'text-green-800 dark:text-green-200'
-                                : 'text-yellow-800 dark:text-yellow-200'
-                                }`}>
-                                Total Target Weight: {totalWeight.toFixed(2)}%
-                                {Math.abs(totalWeight - 100) < 0.01 ? ' ✓' : ` (should equal 100%)`}
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Stock List */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                                Stocks in Portfolio
-                            </h2>
-                            <StockList portfolioId={id} stocks={portfolio.portfolio_stocks} />
-                        </div>
-                    </div>
-
-                    {/* Add Stock Form */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 sticky top-8">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-                                Add Stock
-                            </h2>
-                            <AddStockForm portfolioId={id} />
-                        </div>
-                    </div>
-                </div>
+                <PortfolioTabs
+                    portfolioId={id}
+                    stocks={portfolio.portfolio_stocks}
+                    totalWeight={totalWeight}
+                />
             </main>
         </div>
     )
