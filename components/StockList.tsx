@@ -12,6 +12,8 @@ interface StockListProps {
 
 export default function StockList({ portfolioId, stocks }: StockListProps) {
     const [deleting, setDeleting] = useState<string | null>(null)
+    const [editing, setEditing] = useState<string | null>(null)
+    const [editSymbol, setEditSymbol] = useState('')
     const router = useRouter()
     const supabase = createClient()
 
@@ -32,6 +34,38 @@ export default function StockList({ portfolioId, stocks }: StockListProps) {
             alert('Error deleting stock: ' + error.message)
         } finally {
             setDeleting(null)
+        }
+    }
+
+    const startEdit = (stock: PortfolioStock) => {
+        setEditing(stock.id)
+        setEditSymbol(stock.symbol)
+    }
+
+    const cancelEdit = () => {
+        setEditing(null)
+        setEditSymbol('')
+    }
+
+    const saveEdit = async (stockId: string) => {
+        if (!editSymbol.trim()) {
+            alert('Symbol cannot be empty')
+            return
+        }
+
+        try {
+            const { error } = await supabase
+                .from('portfolio_stocks')
+                .update({ symbol: editSymbol.toUpperCase().trim() })
+                .eq('id', stockId)
+
+            if (error) throw error
+
+            setEditing(null)
+            setEditSymbol('')
+            router.refresh()
+        } catch (error: any) {
+            alert('Error updating stock: ' + error.message)
         }
     }
 
@@ -66,9 +100,49 @@ export default function StockList({ portfolioId, stocks }: StockListProps) {
                 >
                     <div className="flex justify-between items-start">
                         <div className="flex-1">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                                {stock.symbol.toUpperCase()}
-                            </h3>
+                            {editing === stock.id ? (
+                                <div className="flex items-center gap-2 mb-2">
+                                    <input
+                                        type="text"
+                                        value={editSymbol}
+                                        onChange={(e) => setEditSymbol(e.target.value.toUpperCase())}
+                                        className="text-xl font-bold px-2 py-1 border border-blue-500 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        autoFocus
+                                    />
+                                    <button
+                                        onClick={() => saveEdit(stock.id)}
+                                        className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded"
+                                    >
+                                        ✓
+                                    </button>
+                                    <button
+                                        onClick={cancelEdit}
+                                        className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-sm rounded"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 mb-2">
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                                        {stock.symbol.toUpperCase()}
+                                    </h3>
+                                    <button
+                                        onClick={() => startEdit(stock)}
+                                        className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+                                        title="Edit symbol"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
                             <div className="grid grid-cols-3 gap-4 text-sm">
                                 <div>
                                     <span className="text-gray-500 dark:text-gray-400">Target:</span>
