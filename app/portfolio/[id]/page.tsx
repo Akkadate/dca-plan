@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { PortfolioWithStocks } from '@/lib/types/database'
 import StockList from '@/components/StockList'
 import AddStockForm from '@/components/AddStockForm'
+import DeletePortfolioButton from '@/components/DeletePortfolioButton'
 
 export default async function PortfolioDetailPage({
     params,
@@ -60,7 +61,11 @@ export default async function PortfolioDetailPage({
                                 Monthly Budget: ${parseFloat(portfolio.monthly_budget).toFixed(2)}
                             </p>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-4">
+                            <DeletePortfolioButton
+                                portfolioId={id}
+                                portfolioName={portfolio.name}
+                            />
                             <span className="text-sm text-gray-600 dark:text-gray-400">
                                 {user.email}
                             </span>
@@ -75,12 +80,12 @@ export default async function PortfolioDetailPage({
                 {portfolio.portfolio_stocks.length > 0 && (
                     <div className="mb-6">
                         <div className={`p-4 rounded-lg ${Math.abs(totalWeight - 100) < 0.01
-                                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                                : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                            : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
                             }`}>
                             <p className={`text-sm font-medium ${Math.abs(totalWeight - 100) < 0.01
-                                    ? 'text-green-800 dark:text-green-200'
-                                    : 'text-yellow-800 dark:text-yellow-200'
+                                ? 'text-green-800 dark:text-green-200'
+                                : 'text-yellow-800 dark:text-yellow-200'
                                 }`}>
                                 Total Target Weight: {totalWeight.toFixed(2)}%
                                 {Math.abs(totalWeight - 100) < 0.01 ? ' ✓' : ` (should equal 100%)`}
