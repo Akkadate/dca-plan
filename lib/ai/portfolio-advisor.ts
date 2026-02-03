@@ -82,19 +82,14 @@ Risk Tolerance: ${params.risk_tolerance}
 Monthly Budget: ${params.market === 'US' ? '$' : '฿'}${params.budget}
 ${params.sectors && params.sectors.length > 0 ? `Preferred Sectors: ${params.sectors.join(', ')}` : ''}
 
+IMPORTANT: You only need to recommend stock symbols, names, weights, and reasoning. 
+DO NOT provide current_price or metrics (P/E, dividend yield, market cap, etc.) - these will be fetched from real-time APIs.
+
 Requirements:
 1. Recommend 4-6 stocks suitable for this profile
-2. For each stock provide:
-   - symbol: Stock ticker symbol
+2. For each stock provide ONLY:
+   - symbol: Stock ticker symbol${params.market === 'TH' ? ' (without .BK suffix, just the base symbol like PTT, CPALL)' : ''}
    - name: Full company name
-   - current_price: Estimated current price
-   - metrics:
-     * pe_ratio: Price-to-Earnings ratio (or null if N/A)
-     * dividend_yield: Annual dividend yield % (or null if no dividend)
-     * market_cap: Market capitalization in readable format (e.g., "2.8T", "150B")
-     * week52_high: 52-week high price
-     * week52_low: 52-week low price
-     * beta: Stock volatility vs market (or null if N/A)
    - weights:
      * target: Target allocation % (must sum to 100% across all stocks)
      * min: Minimum allocation % (at least 5% below target)
@@ -113,21 +108,12 @@ Return ONLY a valid JSON object with this exact structure:
     {
       "symbol": "AAPL",
       "name": "Apple Inc.",
-      "current_price": 180.50,
-      "metrics": {
-        "pe_ratio": 28.5,
-        "dividend_yield": 0.5,
-        "market_cap": "2.8T",
-        "week52_high": 195.0,
-        "week52_low": 140.0,
-        "beta": 1.2
-      },
       "weights": {
         "target": 25,
         "min": 20,
         "max": 30
       },
-      "reasoning": "Strong fundamentals with consistent revenue growth..."
+      "reasoning": "Strong fundamentals with consistent revenue growth and dominant position in consumer technology..."
     }
   ],
   "portfolio_summary": {

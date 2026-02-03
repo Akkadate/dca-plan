@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStockRecommendations, PortfolioObjective } from '@/lib/ai/portfolio-advisor'
+import { batchFetchStockData } from '@/lib/stock-data/fetcher'
 
 /**
  * AI Stock Recommendation API
  * POST /api/ai/recommend-stocks
+ * 
+ * Hybrid approach:
+ * 1. AI recommends symbols + reasoning + weights
+ * 2. Fetch real-time metrics from Alpha Vantage (US) or Yahoo Finance (Thai)
+ * 3. Merge and return combined data
  */
 export async function POST(request: NextRequest) {
     try {
@@ -46,8 +52,8 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Get AI recommendations
-        const recommendations = await getStockRecommendations({
+        // Step 1: Get AI recommendations (symbols + reasoning + weights only)
+        const aiResponse = await getStockRecommendations({
             market,
             objective,
             risk_tolerance,
@@ -55,9 +61,33 @@ export async function POST(request: NextRequest) {
             sectors: sectors || []
         })
 
+        // Step 2: Extract symbols
+        const symbols = aiResponse.recommendations.map(rec => rec.symbol)
+
+        // Step 3: Fetch real-time stock data for all symbols
+        console.log(`Fetching real-time data for ${symbols.length} stocks...`)
+        const stocksData = await batchFetchStockData(symbols, market)
+
+        // Step 4: Merge AI reasoning + Real metrics
+        const enrichedRecommendations = aiResponse.recommendations.map((rec, index) => {
+            const stockData = stocksData[index]
+
+            return {
+                symbol: stockData.symbol,
+                name: stockData.name || rec.name,
+                current_price: stockData.current_price,
+                metrics: stockData.metrics,
+                weights: rec.weights,
+                reasoning: rec.reasoning,
+                isEstimate: stockData.isEstimate,
+                error: stockData.error
+            }
+        })
+
         return NextResponse.json({
             success: true,
-            ...recommendations
+            recommendations: enrichedRecommendations,
+            portfolio_summary: aiResponse.portfolio_summary
         })
     } catch (error: any) {
         console.error('Error in recommend-stocks API:', error)
