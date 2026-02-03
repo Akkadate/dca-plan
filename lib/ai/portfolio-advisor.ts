@@ -12,6 +12,7 @@ export interface PortfolioObjective {
     sectors?: string[]
 }
 
+// Full stock recommendation (with real-time data)
 export interface StockRecommendation {
     symbol: string
     name: string
@@ -32,6 +33,30 @@ export interface StockRecommendation {
     reasoning: string
 }
 
+// AI returns only these fields (no current_price or metrics)
+export interface AIStockRecommendation {
+    symbol: string
+    name: string
+    weights: {
+        target: number
+        min: number
+        max: number
+    }
+    reasoning: string
+}
+
+// AI Portfolio Response (without real-time data)
+export interface AIPortfolioRecommendation {
+    recommendations: AIStockRecommendation[]
+    portfolio_summary: {
+        risk_level: string
+        expected_return: string
+        diversification_score: number
+        total_stocks: number
+    }
+}
+
+// Full Portfolio Recommendation (with real-time data)
 export interface PortfolioRecommendation {
     recommendations: StockRecommendation[]
     portfolio_summary: {
@@ -127,7 +152,7 @@ Return ONLY a valid JSON object with this exact structure:
 
 export async function getStockRecommendations(
     params: PortfolioObjective
-): Promise<PortfolioRecommendation> {
+): Promise<AIPortfolioRecommendation> {
     try {
         const response = await openai.chat.completions.create({
             model: 'gpt-4o',
@@ -145,7 +170,7 @@ export async function getStockRecommendations(
             throw new Error('No response from OpenAI')
         }
 
-        const result = JSON.parse(content) as PortfolioRecommendation
+        const result = JSON.parse(content) as AIPortfolioRecommendation
 
         // Validate response
         if (!result.recommendations || result.recommendations.length === 0) {
