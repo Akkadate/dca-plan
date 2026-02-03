@@ -85,7 +85,7 @@ export async function fetchYahooFinanceData(symbol: string): Promise<StockData> 
         // Add .BK suffix for Thai stocks if not present
         const yahooSymbol = symbol.includes('.') ? symbol : `${symbol}.BK`
 
-        const quote = await yahooFinance.quote(yahooSymbol)
+        const quote = await yahooFinance.quote(yahooSymbol) as any
 
         if (!quote || !quote.regularMarketPrice) {
             throw new Error(`Symbol ${symbol} not found on Yahoo Finance`)
