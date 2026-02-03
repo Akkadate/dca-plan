@@ -89,12 +89,21 @@ export default async function DashboardPage() {
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                             My Portfolios
                         </h2>
-                        <Link
-                            href="/portfolio/create"
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition text-sm"
-                        >
-                            + New Portfolio
-                        </Link>
+                        <div className="flex gap-3">
+                            <Link
+                                href="/portfolio/create-ai"
+                                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg transition text-sm flex items-center space-x-2"
+                            >
+                                <span>🤖</span>
+                                <span>Create with AI</span>
+                            </Link>
+                            <Link
+                                href="/portfolio/create"
+                                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition text-sm"
+                            >
+                                + Manual
+                            </Link>
+                        </div>
                     </div>
 
                     {!portfolios || portfolios.length === 0 ? (
