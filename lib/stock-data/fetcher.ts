@@ -1,4 +1,4 @@
-import yahooFinance from 'yahoo-finance2'
+import YahooFinance from 'yahoo-finance2'
 
 export interface StockMetrics {
     pe_ratio: number | null
@@ -17,6 +17,9 @@ export interface StockData {
     isEstimate?: boolean
     error?: string
 }
+
+// Create Yahoo Finance instance (required for v2+)
+const yahooFinance = new YahooFinance()
 
 /**
  * Fetch stock data from Alpha Vantage (US stocks)
