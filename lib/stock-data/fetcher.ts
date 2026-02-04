@@ -81,14 +81,14 @@ export async function fetchAlphaVantageData(symbol: string): Promise<StockData> 
 }
 
 /**
- * Fetch stock data from Yahoo Finance (Thai stocks)
+ * Fetch stock data from Yahoo Finance
+ * Note: Symbol should already be formatted correctly (e.g., PTT.BK for Thai, AAPL for US)
  */
 export async function fetchYahooFinanceData(symbol: string): Promise<StockData> {
     try {
-        // Add .BK suffix for Thai stocks if not present
-        const yahooSymbol = symbol.includes('.') ? symbol : `${symbol}.BK`
-
-        const quote = await yahooFinance.quote(yahooSymbol) as any
+        // Symbol should already be properly formatted by caller
+        // Do NOT add .BK here - it causes US stocks to be treated as Thai stocks!
+        const quote = await yahooFinance.quote(symbol) as any
 
         if (!quote || !quote.regularMarketPrice) {
             throw new Error(`Symbol ${symbol} not found on Yahoo Finance`)
