@@ -46,7 +46,15 @@ export default function CreateAIPortfolioPage() {
             }
 
             const result = await response.json()
-            setRecommendations(result)
+
+            // Extract recommendations and portfolio_summary from API response
+            const portfolioData: PortfolioRecommendation = {
+                recommendations: result.recommendations,
+                portfolio_summary: result.portfolio_summary
+            }
+
+            console.log('AI Recommendations received:', portfolioData)
+            setRecommendations(portfolioData)
             setStep(3)
         } catch (err: any) {
             setError(err.message)
@@ -97,8 +105,8 @@ export default function CreateAIPortfolioPage() {
                         {[1, 2, 3].map((s) => (
                             <div key={s} className="flex items-center">
                                 <div className={`flex items-center justify-center w-10 h-10 rounded-full ${step >= s
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                                     }`}>
                                     {s}
                                 </div>
