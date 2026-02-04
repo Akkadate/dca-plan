@@ -58,6 +58,16 @@ export async function POST(request: NextRequest) {
                     continue
                 }
 
+                // Get user's language preference
+                const { data: userData } = await supabase
+                    .from('users')
+                    .select('language_preference')
+                    .eq('id', profile.user_id)
+                    .single()
+
+                const userLang = (userData?.language_preference || 'th') as 'th' | 'en'
+                console.log(`[LINE] User ${profile.user_id} language: ${userLang}`)
+
                 // Get recommendations for all portfolios
                 for (const portfolio of portfolios) {
                     const { data: recommendations } = await supabase
@@ -119,12 +129,13 @@ export async function POST(request: NextRequest) {
                         // Continue without insights - not critical
                     }
 
-                    // Format LINE message (with insights)
+                    // Format LINE message (with insights and language)
                     const message = formatLineMessage(
                         portfolio.name,
                         monthlyBudget,
                         recommendations,
-                        insights  // Include AI insights
+                        insights,  // Include AI insights
+                        userLang   // User's preferred language
                     )
 
                     // Send LINE message
@@ -171,33 +182,66 @@ export async function POST(request: NextRequest) {
 /**
  * Format DCA recommendations as LINE message
  * With optional AI insights for context
+ * Supports Thai and English based on user preference
  */
 function formatLineMessage(
     portfolioName: string,
     monthlyBudget: string,
     recommendations: any[],
-    insights?: any[]  // AI insights (optional)
+    insights?: any[],  // AI insights (optional)
+    lang: 'th' | 'en' = 'th'  // Language preference, default Thai
 ): string {
-    const month = new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+    const locale = lang === 'th' ? 'th-TH' : 'en-US'
+    const month = new Date().toLocaleDateString(locale, { month: 'long', year: 'numeric' })
 
-    let message = `🤖 DCA Plan - ${month}\n\n`
-    message += `Portfolio: ${portfolioName}\n`
-    message += `งบประจำเดือน: $${parseFloat(monthlyBudget).toFixed(2)}\n\n`
-    message += `📊 แผนการลงทุนเดือนนี้:\n\n`
+    // Templates based on language
+    const t = lang === 'th' ? {
+        header: `🤖 แผน DCA - ${month}`,
+        portfolioLabel: 'พอร์ต',
+        budgetLabel: 'งบประจำเดือน',
+        planTitle: '📊 แผนการลงทุนเดือนนี้:',
+        amountLabel: 'จำนวน',
+        reasonLabel: 'เหตุผล',
+        aiLabel: '💡 AI วิเคราะห์:',
+        riskLabel: 'ความเสี่ยง',
+        totalLabel: 'รวม',
+        nextLabel: 'คำนวณครั้งถัดไป',
+        disclaimer: '💡 AI วิเคราะห์เพื่อให้ข้อมูลเท่านั้น\nน้ำหนัก DCA คำนวณด้วย MA50 algorithm'
+    } : {
+        header: `🤖 DCA Plan - ${month}`,
+        portfolioLabel: 'Portfolio',
+        budgetLabel: 'Monthly Budget',
+        planTitle: '📊 This Month\'s Investment Plan:',
+        amountLabel: 'Amount',
+        reasonLabel: 'Reason',
+        aiLabel: '💡 AI Analysis:',
+        riskLabel: 'Risk',
+        totalLabel: 'Total',
+        nextLabel: 'Next calculation',
+        disclaimer: '💡 AI insights are for context only.\nDCA weights calculated by MA50 algorithm.'
+    }
+
+    let message = `${t.header}\n\n`
+    message += `${t.portfolioLabel}: ${portfolioName}\n`
+    message += `${t.budgetLabel}: $${parseFloat(monthlyBudget).toFixed(2)}\n\n`
+    message += `${t.planTitle}\n\n`
 
     for (const rec of recommendations) {
         message += `${rec.symbol}\n`
-        message += `💵 จำนวน: $${parseFloat(rec.amount_usd).toFixed(2)} (${parseFloat(rec.weight).toFixed(1)}%)\n`
+        message += `💵 ${t.amountLabel}: $${parseFloat(rec.amount_usd).toFixed(2)} (${parseFloat(rec.weight).toFixed(1)}%)\n`
         message += `📈 ${rec.reason_text}\n`
 
         // Add AI insight if available
         const insight = insights?.find(i => i.symbol === rec.symbol)
         if (insight) {
-            message += `\n💡 AI Analysis:\n`
+            message += `\n${t.aiLabel}\n`
             message += `${insight.insight}\n`
             if (insight.riskLevel !== 'low') {
                 const riskEmoji = insight.riskLevel === 'high' ? '🔴' : '🟡'
-                message += `${riskEmoji} Risk: ${insight.riskLevel.toUpperCase()}\n`
+                const riskText = lang === 'th'
+                    ? (insight.riskLevel === 'high' ? 'สูง' : 'ปานกลาง')
+                    : insight.riskLevel.toUpperCase()
+                message += `${riskEmoji} ${t.riskLabel}: ${riskText}\n`
             }
         }
 
@@ -205,24 +249,25 @@ function formatLineMessage(
     }
 
     const total = recommendations.reduce((sum, rec) => sum + parseFloat(rec.amount_usd), 0)
-    message += `💰 Total: $${total.toFixed(2)}\n`
-    message += `📅 Next calculation: ${getNextMonthDate()}\n`
+    message += `💰 ${t.totalLabel}: $${total.toFixed(2)}\n`
+    message += `📅 ${t.nextLabel}: ${getNextMonthDate(lang)}\n`
 
     // Add disclaimer if AI insights were included
     if (insights && insights.length > 0) {
-        message += `\n💡 AI insights are for context only.\n`
-        message += `DCA weights calculated by MA50 algorithm.`
+        message += `\n${t.disclaimer}`
     }
 
     return message
 }
 
-function getNextMonthDate(): string {
+function getNextMonthDate(lang: 'th' | 'en' = 'th'): string {
     const next = new Date()
     next.setMonth(next.getMonth() + 1)
     next.setDate(1)
-    return next.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
+    const locale = lang === 'th' ? 'th-TH' : 'en-US'
+    return next.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
 }
+
 
 /**
  * Send message via LINE Messaging API

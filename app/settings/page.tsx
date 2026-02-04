@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import LineProfileForm from '@/components/LineProfileForm'
+import LanguageSetting from '@/components/LanguageSetting'
 
 export default async function SettingsPage() {
     const supabase = await createClient()
@@ -20,6 +21,15 @@ export default async function SettingsPage() {
         .select('*')
         .eq('user_id', user.id)
         .single()
+
+    // Fetch user data for language preference
+    const { data: userData } = await supabase
+        .from('users')
+        .select('language_preference')
+        .eq('id', user.id)
+        .single()
+
+    const currentLanguage = (userData?.language_preference || 'th') as 'th' | 'en'
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -69,6 +79,12 @@ export default async function SettingsPage() {
                     <LineProfileForm
                         userId={user.id}
                         existingLineUserId={lineProfile?.line_user_id}
+                    />
+
+                    {/* Language Preference */}
+                    <LanguageSetting
+                        userId={user.id}
+                        currentLanguage={currentLanguage}
                     />
 
                     {/* Test Section */}
