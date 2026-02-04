@@ -318,3 +318,52 @@ export function calculateEqualDCA(
         reason: 'ข้อมูลไม่เพียงพอ ใช้ Equal DCA',
     }))
 }
+
+/**
+ * Calculate actual portfolio weights from purchase history
+ * This is used to detect portfolio drift for DCA adjustments
+ * 
+ * @param portfolioId - Portfolio ID
+ * @param supabase - Supabase client
+ * @returns Record of symbol -> actual weight percentage
+ */
+export async function calculateActualWeights(
+    portfolioId: string,
+    supabase: any
+): Promise<Record<string, number>> {
+    try {
+        // Fetch all purchases for this portfolio
+        const { data: purchases, error } = await supabase
+            .from('portfolio_purchases')
+            .select('symbol, shares, price_per_share')
+            .eq('portfolio_id', portfolioId)
+
+        if (error || !purchases || purchases.length === 0) {
+            console.log('[Actual Weights] No purchases found for portfolio', portfolioId)
+            return {}  // No purchases yet, use target weights
+        }
+
+        // Calculate total value per symbol
+        const symbolValues: Record<string, number> = {}
+        let totalValue = 0
+
+        for (const purchase of purchases) {
+            const value = parseFloat(purchase.shares) * parseFloat(purchase.price_per_share)
+            symbolValues[purchase.symbol] = (symbolValues[purchase.symbol] || 0) + value
+            totalValue += value
+        }
+
+        // Convert to percentages
+        const weights: Record<string, number> = {}
+        for (const [symbol, value] of Object.entries(symbolValues)) {
+            weights[symbol] = (value / totalValue) * 100
+        }
+
+        console.log('[Actual Weights] Calculated from purchases:', weights)
+
+        return weights
+    } catch (error: any) {
+        console.error('[Actual Weights] Error calculating actual weights:', error.message)
+        return {}  // Fallback to target weights
+    }
+}

@@ -72,11 +72,59 @@ export async function POST(request: NextRequest) {
                         continue
                     }
 
-                    // Format LINE message
+                    // Get portfolio monthly budget
+                    const { data: portfolioData } = await supabase
+                        .from('portfolios')
+                        .select('monthly_budget')
+                        .eq('id', portfolio.id)
+                        .single()
+
+                    const monthlyBudget = portfolioData?.monthly_budget || '0'
+
+                    // Generate AI insights (with caching)
+                    let insights: any[] = []
+                    try {
+                        const { getCachedInsights } = await import('@/lib/ai/dca-insights')
+                        const { calculateMA50 } = await import('@/lib/dca/calculator')
+
+                        // Get price history for MA50 calculation
+                        const { data: stockPrices } = await supabase
+                            .from('stock_prices')
+                            .select('symbol, close_price')
+                            .in('symbol', recommendations.map(r => r.symbol))
+                            .order('date', { ascending: false })
+                            .limit(50 * recommendations.length)
+
+                        // Prepare recommendations with MA50 data
+                        const recsWithMA = recommendations.map(rec => {
+                            const prices = stockPrices?.filter(p => p.symbol === rec.symbol) || []
+                            const ma50 = prices.length >= 50
+                                ? prices.slice(0, 50).reduce((sum, p) => sum + parseFloat(p.close_price), 0) / 50
+                                : parseFloat(rec.amount_usd) / parseFloat(rec.weight) * 100  // Fallback
+
+                            return {
+                                symbol: rec.symbol,
+                                finalWeight: parseFloat(rec.weight),
+                                amountUSD: parseFloat(rec.amount_usd),
+                                reason: rec.reason_text,
+                                currentPrice: prices[0] ? parseFloat(prices[0].close_price) : 0,
+                                ma50
+                            }
+                        })
+
+                        insights = await getCachedInsights(portfolio.id, recsWithMA)
+                        console.log(`[LINE] Generated ${insights.length} AI insights for portfolio ${portfolio.id}`)
+                    } catch (error) {
+                        console.error(`[LINE] Error generating AI insights:`, error)
+                        // Continue without insights - not critical
+                    }
+
+                    // Format LINE message (with insights)
                     const message = formatLineMessage(
                         portfolio.name,
-                        monthName,
-                        recommendations
+                        monthlyBudget,
+                        recommendations,
+                        insights  // Include AI insights
                     )
 
                     // Send LINE message
@@ -92,6 +140,7 @@ export async function POST(request: NextRequest) {
                             portfolio_id: portfolio.id,
                             line_user_id: profile.line_user_id,
                             status: 'sent',
+                            ai_insights: insights.length
                         })
                     }
                 }
@@ -121,29 +170,58 @@ export async function POST(request: NextRequest) {
 
 /**
  * Format DCA recommendations as LINE message
+ * With optional AI insights for context
  */
 function formatLineMessage(
     portfolioName: string,
-    monthName: string,
-    recommendations: any[]
+    monthlyBudget: string,
+    recommendations: any[],
+    insights?: any[]  // AI insights (optional)
 ): string {
-    const totalAmount = recommendations.reduce(
-        (sum, rec) => sum + parseFloat(rec.amount_usd),
-        0
-    )
+    const month = new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
 
-    let message = `📊 แผน DCA – ${monthName}\n`
-    message += `📁 ${portfolioName}\n`
-    message += `💰 งบรวม: $${totalAmount.toFixed(2)}\n\n`
+    let message = `🤖 DCA Plan - ${month}\n\n`
+    message += `Portfolio: ${portfolioName}\n`
+    message += `งบประจำเดือน: $${parseFloat(monthlyBudget).toFixed(2)}\n\n`
+    message += `📊 แผนการลงทุนเดือนนี้:\n\n`
 
     for (const rec of recommendations) {
-        message += `${rec.symbol}: $${parseFloat(rec.amount_usd).toFixed(2)}\n`
-        message += `เหตุผล: ${rec.reason_text}\n\n`
+        message += `${rec.symbol}\n`
+        message += `💵 จำนวน: $${parseFloat(rec.amount_usd).toFixed(2)} (${parseFloat(rec.weight).toFixed(1)}%)\n`
+        message += `📈 ${rec.reason_text}\n`
+
+        // Add AI insight if available
+        const insight = insights?.find(i => i.symbol === rec.symbol)
+        if (insight) {
+            message += `\n💡 AI Analysis:\n`
+            message += `${insight.insight}\n`
+            if (insight.riskLevel !== 'low') {
+                const riskEmoji = insight.riskLevel === 'high' ? '🔴' : '🟡'
+                message += `${riskEmoji} Risk: ${insight.riskLevel.toUpperCase()}\n`
+            }
+        }
+
+        message += `\n---\n\n`
     }
 
-    message += `✅ ซื้อได้วันที่ 2 ของเดือนนี้`
+    const total = recommendations.reduce((sum, rec) => sum + parseFloat(rec.amount_usd), 0)
+    message += `💰 Total: $${total.toFixed(2)}\n`
+    message += `📅 Next calculation: ${getNextMonthDate()}\n`
+
+    // Add disclaimer if AI insights were included
+    if (insights && insights.length > 0) {
+        message += `\n💡 AI insights are for context only.\n`
+        message += `DCA weights calculated by MA50 algorithm.`
+    }
 
     return message
+}
+
+function getNextMonthDate(): string {
+    const next = new Date()
+    next.setMonth(next.getMonth() + 1)
+    next.setDate(1)
+    return next.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 /**

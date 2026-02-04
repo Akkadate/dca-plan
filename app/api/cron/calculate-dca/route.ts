@@ -90,12 +90,18 @@ export async function POST(request: NextRequest) {
                     recommendations = calculateEqualDCA(stocks, parseFloat(portfolio.monthly_budget))
                 } else {
                     console.log(`[DCA] Portfolio ${portfolio.id}: Using Smart DCA with MA50`)
+
+                    // Get actual weights from purchase history (if any)
+                    const { calculateActualWeights } = await import('@/lib/dca/calculator')
+                    const actualWeights = await calculateActualWeights(portfolio.id, supabase)
+
                     // Prepare inputs for DCA calculation
                     const inputs: DCAInput[] = stockPricesData.map(({ stock, prices }) => ({
                         stock,
                         currentPrice: parseFloat(prices[0].close_price),
                         priceHistory: prices as StockPrice[],
                         monthlyBudget: parseFloat(portfolio.monthly_budget),
+                        actualWeight: actualWeights[stock.symbol]  // Use actual weight from purchases or undefined
                     }))
 
                     // Calculate DCA
