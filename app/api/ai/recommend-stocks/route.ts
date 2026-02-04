@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Step 1: Get AI recommendations (symbols + reasoning + weights only)
+        console.log('Step 1: Calling OpenAI for recommendations...')
         const aiResponse = await getStockRecommendations({
             market,
             objective,
@@ -60,15 +61,27 @@ export async function POST(request: NextRequest) {
             budget,
             sectors: sectors || []
         })
+        console.log(`Step 1 Complete: AI recommended ${aiResponse.recommendations.length} stocks`)
 
         // Step 2: Extract symbols
         const symbols = aiResponse.recommendations.map(rec => rec.symbol)
+        console.log(`Step 2: Extracted symbols: ${symbols.join(', ')}`)
 
         // Step 3: Fetch real-time stock data for all symbols
-        console.log(`Fetching real-time data for ${symbols.length} stocks...`)
+        console.log(`Step 3: Fetching real-time ${market} market data for ${symbols.length} stocks...`)
+        console.log(`Environment check: STOCK_API_KEY=${process.env.STOCK_API_KEY ? 'SET' : 'NOT SET'}`)
+        console.log(`Environment check: OPENAI_API_KEY=${process.env.OPENAI_API_KEY ? 'SET' : 'NOT SET'}`)
+
         const stocksData = await batchFetchStockData(symbols, market)
+        console.log(`Step 3 Complete: Fetched ${stocksData.length} stock data entries`)
+
+        // Log first stock data for debugging
+        if (stocksData.length > 0) {
+            console.log('Sample stock data:', JSON.stringify(stocksData[0], null, 2))
+        }
 
         // Step 4: Merge AI reasoning + Real metrics
+        console.log('Step 4: Merging AI reasoning with real stock data...')
         const enrichedRecommendations = aiResponse.recommendations.map((rec, index) => {
             const stockData = stocksData[index]
 
@@ -83,6 +96,8 @@ export async function POST(request: NextRequest) {
                 error: stockData.error
             }
         })
+
+        console.log('Step 4 Complete: Enriched recommendations ready')
 
         return NextResponse.json({
             success: true,

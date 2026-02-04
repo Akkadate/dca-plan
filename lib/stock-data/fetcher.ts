@@ -120,12 +120,18 @@ export async function fetchStockData(
     market: 'US' | 'TH'
 ): Promise<StockData> {
     try {
+        console.log(`Fetching ${market} data for ${symbol}...`)
         if (market === 'US') {
-            return await fetchAlphaVantageData(symbol)
+            const data = await fetchAlphaVantageData(symbol)
+            console.log(`✅ Successfully fetched ${symbol} from Alpha Vantage: price=$${data.current_price}`)
+            return data
         } else {
-            return await fetchYahooFinanceData(symbol)
+            const data = await fetchYahooFinanceData(symbol)
+            console.log(`✅ Successfully fetched ${symbol} from Yahoo Finance: price=$${data.current_price}`)
+            return data
         }
     } catch (error: any) {
+        console.error(`❌ Error fetching ${market} data for ${symbol}:`, error.message)
         // Return placeholder data with error flag
         return {
             symbol,
