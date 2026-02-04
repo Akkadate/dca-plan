@@ -119,7 +119,12 @@ Requirements:
      * target: Target allocation % (must sum to 100% across all stocks)
      * min: Minimum allocation % (at least 5% below target)
      * max: Maximum allocation % (at least 5% above target)
-   - reasoning: 2-3 sentences explaining why this stock fits the objective
+   - reasoning: 4-5 sentences providing comprehensive investment analysis including:
+     * Company's core business and market position
+     * Key growth drivers and competitive advantages
+     * Financial health indicators (revenue growth, profitability trends)
+     * Specific reasons it fits the investment objective
+     * Potential risks or considerations
 
 3. Provide portfolio_summary:
    - risk_level: "Low", "Medium-Low", "Medium", "Medium-High", or "High"

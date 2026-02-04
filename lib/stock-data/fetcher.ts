@@ -100,9 +100,7 @@ export async function fetchYahooFinanceData(symbol: string): Promise<StockData> 
             current_price: quote.regularMarketPrice,
             metrics: {
                 pe_ratio: quote.trailingPE || null,
-                dividend_yield: quote.dividendYield
-                    ? quote.dividendYield * 100
-                    : null,
+                dividend_yield: quote.dividendYield || null,  // Already in percentage (e.g., 5.33)
                 market_cap: formatMarketCap(quote.marketCap),
                 week52_high: quote.fiftyTwoWeekHigh || quote.regularMarketPrice,
                 week52_low: quote.fiftyTwoWeekLow || quote.regularMarketPrice,
