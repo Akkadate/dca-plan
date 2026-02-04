@@ -90,8 +90,16 @@ export async function POST(request: NextRequest) {
 
         try {
             const { fetchHistoricalPrices } = await import('@/lib/stock-data/fetcher')
+            const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+
+            // Use service role client for inserting stock prices (bypasses RLS)
+            const serviceSupabase = createServiceClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY!
+            )
 
             const pricePromises = stocks.map(async (stock: any) => {
+
                 try {
                     const symbol = stock.symbol.toUpperCase().trim()
 
@@ -116,7 +124,7 @@ export async function POST(request: NextRequest) {
                         created_at: new Date().toISOString()
                     }))
 
-                    const { error: insertError } = await supabase
+                    const { error: insertError } = await serviceSupabase
                         .from('stock_prices')
                         .upsert(priceInserts, {
                             onConflict: 'symbol,date',
