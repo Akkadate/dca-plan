@@ -85,6 +85,46 @@ export async function POST(request: NextRequest) {
             throw new Error('Failed to create portfolio stocks')
         }
 
+        // Fetch and store initial stock prices for DCA calculation
+        console.log(`[Portfolio Create] Fetching initial prices for ${stocks.length} stocks...`)
+
+        try {
+            // Import the fetch price API
+            const pricePromises = stocks.map(async (stock: any) => {
+                try {
+                    const symbol = stock.symbol.toUpperCase().trim()
+                    console.log(`[Portfolio Create] Fetching price for ${symbol}...`)
+
+                    // Call the internal fetch API
+                    const fetchResponse = await fetch(`${request.nextUrl.origin}/api/prices/fetch`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ symbol })
+                    })
+
+                    if (fetchResponse.ok) {
+                        const fetchData = await fetchResponse.json()
+                        console.log(`[Portfolio Create] ✅ Fetched price for ${symbol}: $${fetchData.price}`)
+                        return { symbol, success: true }
+                    } else {
+                        console.warn(`[Portfolio Create] ⚠️ Failed to fetch price for ${symbol}`)
+                        return { symbol, success: false }
+                    }
+                } catch (error: any) {
+                    console.error(`[Portfolio Create] ❌ Error fetching price for ${stock.symbol}:`, error.message)
+                    return { symbol: stock.symbol, success: false }
+                }
+            })
+
+            const priceResults = await Promise.all(pricePromises)
+            const successCount = priceResults.filter(r => r.success).length
+            console.log(`[Portfolio Create] Price fetch complete: ${successCount}/${stocks.length} successful`)
+        } catch (error: any) {
+            console.error('[Portfolio Create] Error fetching initial prices:', error.message)
+            // Don't fail portfolio creation if price fetch fails
+            // DCA will fall back to equal weights
+        }
+
         return NextResponse.json({
             success: true,
             portfolio
