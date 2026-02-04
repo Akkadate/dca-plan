@@ -72,19 +72,24 @@ export async function POST(request: NextRequest) {
                     console.log(`  ${stock.symbol}: ${prices.length} prices`)
                 })
 
-                // Check if we have sufficient data
+                // Check if we have sufficient data for MA50 calculation
                 const insufficientData = stockPricesData.some(
-                    ({ prices }) => prices.length < 6
+                    ({ prices }) => prices.length < 50  // Need 50 days for MA50
                 )
 
                 let recommendations
 
                 if (insufficientData) {
                     // Fallback to equal DCA
-                    console.log(`Insufficient data for portfolio ${portfolio.id}, using equal DCA`)
+                    console.log(`[DCA] Portfolio ${portfolio.id}: Insufficient data for MA50. Using Equal DCA.`)
+                    stockPricesData.forEach(({ stock, prices }) => {
+                        if (prices.length < 50) {
+                            console.log(`  - ${stock.symbol}: ${prices.length}/50 data points (need ${50 - prices.length} more)`)
+                        }
+                    })
                     recommendations = calculateEqualDCA(stocks, parseFloat(portfolio.monthly_budget))
                 } else {
-                    console.log(`Using Smart DCA for portfolio ${portfolio.id}`)
+                    console.log(`[DCA] Portfolio ${portfolio.id}: Using Smart DCA with MA50`)
                     // Prepare inputs for DCA calculation
                     const inputs: DCAInput[] = stockPricesData.map(({ stock, prices }) => ({
                         stock,

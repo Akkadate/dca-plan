@@ -22,38 +22,68 @@ export interface WeightAdjustment {
 }
 
 /**
- * Calculate 6-month moving average (MA6)
+ * Calculate 50-day moving average (MA50)
+ * Industry standard for medium-term DCA investing
+ * Provides better signal-to-noise ratio than shorter periods
  */
-export function calculateMA6(priceHistory: StockPrice[]): number {
-    if (priceHistory.length < 6) {
-        throw new Error('Insufficient price history for MA6 calculation')
+export function calculateMA50(priceHistory: StockPrice[]): number {
+    if (priceHistory.length < 50) {
+        throw new Error('Insufficient price history for MA50 calculation (need 50+ data points)')
     }
 
-    // Sort by date descending and take last 6 months
+    // Sort by date descending and take last 50 days
     const sortedPrices = priceHistory
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 6)
+        .slice(0, 50)
 
     const sum = sortedPrices.reduce((acc, price) => acc + parseFloat(price.close_price.toString()), 0)
-    return sum / 6
+    return sum / 50
 }
 
 /**
- * Calculate 3-month volatility (standard deviation)
+ * @deprecated Use calculateMA50 instead. MA6 is too short for DCA strategy.
+ * Kept for backward compatibility only.
  */
-export function calculate3MonthVolatility(priceHistory: StockPrice[]): number {
-    if (priceHistory.length < 3) {
-        return 0
+export function calculateMA6(priceHistory: StockPrice[]): number {
+    console.warn('[DCA] calculateMA6 is deprecated. Use calculateMA50 for better DCA accuracy.')
+    // Fallback to MA50 if enough data, otherwise use what's available
+    if (priceHistory.length >= 50) {
+        return calculateMA50(priceHistory)
+    }
+    // Not enough data for MA50, use shorter period
+    const days = Math.min(priceHistory.length, 6)
+    const sortedPrices = priceHistory
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, days)
+    const sum = sortedPrices.reduce((acc, price) => acc + parseFloat(price.close_price.toString()), 0)
+    return sum / days
+}
+
+/**
+ * Calculate 30-day volatility (standard deviation)
+ * More appropriate for monthly DCA than 3-month period
+ */
+export function calculate30DayVolatility(priceHistory: StockPrice[]): number {
+    if (priceHistory.length < 30) {
+        return 0  // Not enough data, assume low volatility
     }
 
     const sortedPrices = priceHistory
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 3)
+        .slice(0, 30)
         .map(p => parseFloat(p.close_price.toString()))
 
     const mean = sortedPrices.reduce((acc, p) => acc + p, 0) / sortedPrices.length
     const variance = sortedPrices.reduce((acc, p) => acc + Math.pow(p - mean, 2), 0) / sortedPrices.length
-    return Math.sqrt(variance) / mean // Coefficient of variation
+    return Math.sqrt(variance) / mean  // Coefficient of variation
+}
+
+/**
+ * @deprecated Use calculate30DayVolatility instead. 30 days is more appropriate for monthly DCA.
+ */
+export function calculate3MonthVolatility(priceHistory: StockPrice[]): number {
+    console.warn('[DCA] calculate3MonthVolatility is deprecated. Use calculate30DayVolatility instead.')
+    return calculate30DayVolatility(priceHistory)
 }
 
 /**
@@ -128,9 +158,9 @@ export function calculateDCAWeight(input: DCAInput): {
     // STEP 1: Base weight
     const baseWeight = parseFloat(input.stock.target_weight.toString())
 
-    // STEP 2: Price deviation adjustment
-    const ma6 = calculateMA6(input.priceHistory)
-    const priceDeviation = getPriceDeviationAdjustment(input.currentPrice, ma6)
+    // STEP 2: Price deviation adjustment (using MA50)
+    const ma50 = calculateMA50(input.priceHistory)
+    const priceDeviation = getPriceDeviationAdjustment(input.currentPrice, ma50)
 
     // STEP 3: Portfolio drift adjustment
     const portfolioDrift = getPortfolioDriftAdjustment(
@@ -138,8 +168,8 @@ export function calculateDCAWeight(input: DCAInput): {
         baseWeight
     )
 
-    // STEP 4: Volatility guard
-    const volatility = calculate3MonthVolatility(input.priceHistory)
+    // STEP 4: Volatility guard (using 30-day volatility)
+    const volatility = calculate30DayVolatility(input.priceHistory)
     const volatilityGuard = getVolatilityGuardAdjustment(volatility)
 
     // Calculate total adjustment

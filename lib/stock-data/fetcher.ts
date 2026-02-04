@@ -81,6 +81,59 @@ export async function fetchAlphaVantageData(symbol: string): Promise<StockData> 
 }
 
 /**
+ * Fetch historical stock prices from Yahoo Finance
+ * Used to populate price history for DCA MA50 calculation
+ * @param symbol - Stock symbol (already formatted: AAPL or PTT.BK)
+ * @param days - Number of days to fetch (default: 50 for MA50)
+ * @returns Array of historical prices
+ */
+export async function fetchHistoricalPrices(
+    symbol: string,
+    days: number = 50
+): Promise<Array<{ date: string; close: number }>> {
+    try {
+        console.log(`[Historical] Fetching ${days} days of data for ${symbol}...`)
+
+        const endDate = new Date()
+        const startDate = new Date()
+        // Add buffer for weekends/holidays
+        startDate.setDate(startDate.getDate() - Math.ceil(days * 1.5))
+
+        // Use Yahoo Finance v2 historical API
+        const historicalData = await yahooFinance.historical(symbol, {
+            period1: startDate,
+            period2: endDate,
+            interval: '1d'  // Daily data
+        }) as any[]
+
+        if (!historicalData || historicalData.length === 0) {
+            throw new Error(`No historical data found for ${symbol}`)
+        }
+
+        // Take last N days (sorted by date)
+        const prices = historicalData
+            .filter(item => item && item.date && item.close)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, days)
+            .map(item => ({
+                date: item.date.toISOString().split('T')[0],
+                close: item.close
+            }))
+
+        console.log(`[Historical] ✅ Fetched ${prices.length}/${days} days for ${symbol}`)
+
+        if (prices.length < days) {
+            console.warn(`[Historical] ⚠️ Only got ${prices.length}/${days} days for ${symbol}`)
+        }
+
+        return prices
+    } catch (error: any) {
+        console.error(`[Historical] ❌ Error fetching historical data for ${symbol}:`, error.message)
+        throw error
+    }
+}
+
+/**
  * Fetch stock data from Yahoo Finance
  * Note: Symbol should already be formatted correctly (e.g., PTT.BK for Thai, AAPL for US)
  */
