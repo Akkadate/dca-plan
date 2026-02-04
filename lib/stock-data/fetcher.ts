@@ -122,15 +122,16 @@ export async function fetchStockData(
 ): Promise<StockData> {
     try {
         console.log(`Fetching ${market} data for ${symbol}...`)
-        if (market === 'US') {
-            const data = await fetchAlphaVantageData(symbol)
-            console.log(`✅ Successfully fetched ${symbol} from Alpha Vantage: price=$${data.current_price}`)
-            return data
-        } else {
-            const data = await fetchYahooFinanceData(symbol)
-            console.log(`✅ Successfully fetched ${symbol} from Yahoo Finance: price=$${data.current_price}`)
-            return data
-        }
+
+        // Use Yahoo Finance for BOTH US and Thai stocks
+        // Yahoo Finance has no rate limits and provides complete data
+        const yahooSymbol = market === 'TH'
+            ? (symbol.includes('.') ? symbol : `${symbol}.BK`)  // Thai: add .BK suffix
+            : symbol  // US: use symbol as-is (AAPL, MSFT, etc.)
+
+        const data = await fetchYahooFinanceData(yahooSymbol)
+        console.log(`✅ Successfully fetched ${symbol} from Yahoo Finance: price=$${data.current_price}, market_cap=${data.metrics.market_cap}`)
+        return data
     } catch (error: any) {
         console.error(`❌ Error fetching ${market} data for ${symbol}:`, error.message)
         // Return placeholder data with error flag
